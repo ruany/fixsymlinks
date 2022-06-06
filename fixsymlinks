@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SYMLINK_DIR=.
+SEARCH_DIR=${SEARCH_DIR-..}
+
+for file in "$SYMLINK_DIR"/*; do
+    if [ ! -e "$file" ] && [ -h "$file" ]; then
+        echo "Found broken symlink: $file"
+        portion=${file%.*}
+        if [ -z "$portion" ]; then continue; fi
+
+        portion=${portion/$SYMLINK_DIR\/link to /}
+        portion=${portion/$SYMLINK_DIR\//}
+        echo "Portion: $portion"
+        # yes the dot is literal
+        candidate=$(find "$SEARCH_DIR" -type f -name "${portion}.*" -print -quit ||:)
+        if [ ! -z "$candidate" ]; then
+            echo "Found candidate: $candidate"
+            basename=$(basename "$candidate")
+            rm "$file" && ln -sv "$candidate" ./"$basename"
+        fi
+    fi
+done
